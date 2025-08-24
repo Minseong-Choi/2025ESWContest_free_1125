@@ -19,11 +19,9 @@ class _DrawingScreenState extends State<DrawingScreen> {
   final BluetoothService _bluetoothService = BluetoothService();
 
   DrawingStage _currentStage = DrawingStage.oneThird;
-  String? _correctAnswer;
-  List<String> _options = [];
+  DrawingData? _drawingData;
   String? _selectedAnswer;
   bool _isLoading = true;
-  String? _imageUrl;
 
   @override
   void initState() {
@@ -35,40 +33,35 @@ class _DrawingScreenState extends State<DrawingScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // API에서 카테고리에 맞는 랜덤 이미지 가져오기
       final drawingData = await _apiService.getRandomDrawing(widget.category);
 
       setState(() {
-        _correctAnswer = drawingData.name;
-        _imageUrl = drawingData.imageUrl;
-        _options = _generateOptions(drawingData.name, drawingData.wrongAnswers);
+        _drawingData = drawingData;
         _isLoading = false;
       });
 
       // EV3에 1/3 그리기 명령 전송
       await _bluetoothService.sendDrawCommand(
-        imageUrl: _imageUrl!,
+        imageUrl: _drawingData!.imageUrl,
         stage: DrawingStage.oneThird,
       );
     } catch (e) {
-      // 에러 처리
       setState(() => _isLoading = false);
       _showErrorDialog();
     }
   }
 
-  List<String> _generateOptions(String correct, List<String> wrong) {
-    final options = [correct, ...wrong.take(2)];
+  List<String> get _options {
+    if (_drawingData == null) return [];
+    final options = [_drawingData!.name, ..._drawingData!.wrongAnswers];
     options.shuffle(Random());
-    return options;
+    return options.take(3).toList();
   }
 
   void _checkAnswer(String answer) {
-    setState(() {
-      _selectedAnswer = answer;
-    });
+    setState(() => _selectedAnswer = answer);
 
-    if (answer == _correctAnswer) {
+    if (answer == _drawingData!.name) {
       _showCorrectDialog();
     } else {
       _moveToTwoThirds();
@@ -81,21 +74,17 @@ class _DrawingScreenState extends State<DrawingScreen> {
       _selectedAnswer = null;
     });
 
-    // EV3에 2/3 그리기 명령 전송
     await _bluetoothService.sendDrawCommand(
-      imageUrl: _imageUrl!,
+      imageUrl: _drawingData!.imageUrl,
       stage: DrawingStage.twoThirds,
     );
   }
 
   void _completeDrawing() async {
-    setState(() {
-      _currentStage = DrawingStage.complete;
-    });
+    setState(() => _currentStage = DrawingStage.complete);
 
-    // EV3에 완성 그리기 명령 전송
     await _bluetoothService.sendDrawCommand(
-      imageUrl: _imageUrl!,
+      imageUrl: _drawingData!.imageUrl,
       stage: DrawingStage.complete,
     );
 
@@ -168,7 +157,7 @@ class _DrawingScreenState extends State<DrawingScreen> {
           borderRadius: BorderRadius.circular(20),
         ),
         title: Text(
-          '그림 완성! 정답은 "$_correctAnswer"',
+          '그림 완성! 정답은 "${_drawingData!.name}"',
           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
         content: const Text(
@@ -226,6 +215,7 @@ class _DrawingScreenState extends State<DrawingScreen> {
     setState(() {
       _currentStage = DrawingStage.oneThird;
       _selectedAnswer = null;
+      _drawingData = null;
     });
     _loadDrawing();
   }
@@ -376,7 +366,7 @@ class _DrawingScreenState extends State<DrawingScreen> {
                                 : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _selectedAnswer == option
-                                  ? (option == _correctAnswer
+                                  ? (option == _drawingData!.name
                                   ? Colors.green.shade400
                                   : Colors.red.shade400)
                                   : Colors.amber.shade300,

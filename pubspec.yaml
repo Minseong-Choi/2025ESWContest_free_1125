@@ -10,11 +10,12 @@ dependencies:
   flutter:
     sdk: flutter
 
+
   # UI 관련
   cupertino_icons: ^1.0.6
 
   # 네트워크 통신 (추후 백엔드 연결 시 사용)
-  # http: ^1.1.0
+  http: ^1.1.0
 
   # Bluetooth 통신 (실제 EV3 연결 시 사용)
   # flutter_blue_plus: ^1.31.15

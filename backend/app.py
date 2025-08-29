@@ -1,0 +1,113 @@
+from flask import Flask, jsonify, send_from_directory
+from flask_cors import CORS
+import os, random
+
+app = Flask(__name__)
+CORS(app)
+
+# 이미지가 들어있는 폴더 경로
+IMAGE_FOLDER = os.path.join(app.root_path, "static/images")
+
+# 파일명 → 한글 이름 매핑
+NAME_MAP = {
+    "apple": "사과",
+    "grape": "포도",
+    "banana": "바나나",
+    "strawberry": "딸기",
+    "watermelon" : "수박",
+    "pear" : "배",
+    "cosmos":"코스모스",
+    "jangmi" : "장미",
+    "haebalagi" : "해바라기",
+    "gookhwa" : "국화",
+    "baekhap" :"백합",
+    "tulip" : "튤립",
+    "jindallae" :"진달래",
+    "bicycle" : "자전거",
+    "airplane" : "비행기",
+    "bus" : "버스",
+    "motorcycle" : "오토바이",
+    "train" : "기차",
+    "yulgigoo" : "열기구",
+    "ship" : "배",
+    "bag" : "가방",
+    "clock" : "시계",
+    "cup" : "컵",
+    "glass" : "안경",
+    "hat" : "모자",
+    "shoes" : "신발",
+    "umbrella" : "우산",
+    "cat_drawing" : "고양이",
+    "dog_drawing" : "강아지",
+    "fox_drawing" : "여우",
+    "giraffe_drawing" : "기린",
+    "hippo_drawing" : "하마",
+    "owl" : "부엉이",
+    "penguin" : "펭귄",
+    "1_drawing" : "송학(솔)",
+    "2_drawing" : "매조",
+    "3_drawing" : "벚꽃(사쿠라)",
+    "4_draiwng" :"등나무(흑싸리)",
+    "5_drawing" : "제비붓꽃(난초)",
+    "6_drawing" : "모란(목단)",
+    "7_drawing" : "싸리",
+    "8_drawing" : "억새",
+    "9_drawing" : "국화",
+    "10_drawing" : "단풍",
+    "11_drawing" : "오동",
+    "12_drawing" : "버드나무"
+}
+
+CATEGORY_MAP = {
+    "동물": "animals",
+    "과일": "fruits",
+    "탈것": "vehicles",
+    "꽃": "flowers",
+    "화투" : "hwatu",
+    "사물" : "objects"
+}
+
+@app.route("/api/random/<category>")
+def random_image(category):
+    folder_name = CATEGORY_MAP.get(category)
+    if not folder_name:
+        return jsonify({"error": "Category not found"}), 404
+
+    category_path = os.path.join(IMAGE_FOLDER, folder_name)
+
+    # 이미지 파일만 필터링
+    images = [img for img in os.listdir(category_path) if img.lower().endswith((".png", ".jpg", ".jpeg"))]
+    if not images:
+        return jsonify({"error": "No images in this category"}), 404
+
+    # 랜덤 선택
+    image_file = random.choice(images)
+    
+    # 정답 한글 이름
+    correct_name = NAME_MAP.get(os.path.splitext(image_file)[0], os.path.splitext(image_file)[0])
+
+    # 오답 이름 (한글 매핑 적용)
+    wrong_names = [
+        NAME_MAP.get(os.path.splitext(img)[0], os.path.splitext(img)[0])
+        for img in images if img != image_file
+    ]
+
+    # 랜덤 3개 선택
+    wrong_sample = random.sample(wrong_names, min(3, len(wrong_names)))
+
+    return jsonify({
+        "name": correct_name,
+        "imageUrl": f"/static/images/{category}/{image_file}",
+        "wrongAnswers": wrong_sample
+    })
+
+# 정적 파일 제공 (Flutter에서 불러올 때 필요)
+@app.route("/static/images/<path:filename>")
+def serve_image(filename):
+    return send_from_directory(IMAGE_FOLDER, filename)
+
+if __name__ == "__main__":
+    import sys
+    import logging
+    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    app.run(host="0.0.0.0", port=5001, debug=True, use_reloader=False)

@@ -41,10 +41,7 @@ class _DrawingScreenState extends State<DrawingScreen> {
       });
 
       // EV3에 1/3 그리기 명령 전송
-      await _bluetoothService.sendDrawCommand(
-        imageUrl: _drawingData!.imageUrl,
-        stage: DrawingStage.oneThird,
-      );
+      await _apiService.drawOnEv3(_drawingData!.part1JsonUrl);
     } catch (e) {
       setState(() => _isLoading = false);
       _showErrorDialog();
@@ -74,19 +71,13 @@ class _DrawingScreenState extends State<DrawingScreen> {
       _selectedAnswer = null;
     });
 
-    await _bluetoothService.sendDrawCommand(
-      imageUrl: _drawingData!.imageUrl,
-      stage: DrawingStage.twoThirds,
-    );
+    await _apiService.drawOnEv3(_drawingData!.part2JsonUrl);
   }
 
   void _completeDrawing() async {
     setState(() => _currentStage = DrawingStage.complete);
 
-    await _bluetoothService.sendDrawCommand(
-      imageUrl: _drawingData!.imageUrl,
-      stage: DrawingStage.complete,
-    );
+    await _apiService.drawOnEv3(_drawingData!.part3JsonUrl);
 
     _showRetryDialog();
   }
@@ -356,48 +347,49 @@ class _DrawingScreenState extends State<DrawingScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      ...(_options.map((option) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _selectedAnswer == null
-                                ? () => _checkAnswer(option)
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _selectedAnswer == option
-                                  ? (option == _drawingData!.name
-                                  ? Colors.green.shade400
-                                  : Colors.red.shade400)
-                                  : Colors.amber.shade300,
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 20,
+
+                      // 버튼들을 Expanded로 감싸서 균등 분배
+                      ..._options.map((option) => Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _selectedAnswer == null
+                                  ? () => _checkAnswer(option)
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _selectedAnswer == option
+                                    ? (option == _drawingData!.name
+                                    ? Colors.green.shade400
+                                    : Colors.red.shade400)
+                                    : Colors.amber.shade300,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                            ),
-                            child: Text(
-                              option,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                              child: Text(
+                                option,
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      )).toList()),
+                      )),
                     ],
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
 // 그리기 완료 화면
 class DrawingCompleteScreen extends StatelessWidget {

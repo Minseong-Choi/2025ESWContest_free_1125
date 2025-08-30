@@ -1,12 +1,14 @@
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import os, random
+import subprocess
 
 app = Flask(__name__)
 CORS(app)
 
 # 이미지가 들어있는 폴더 경로
 IMAGE_FOLDER = os.path.join(app.root_path, "static/images")
+JSON_FOLDER = os.path.join(app.root_path, "drawing_bot/contour_json")
 
 # 파일명 → 한글 이름 매핑
 NAME_MAP = {
@@ -74,34 +76,52 @@ def random_image(category):
         return jsonify({"error": "Category not found"}), 404
 
     category_path = os.path.join(IMAGE_FOLDER, folder_name)
-
-    # 이미지 파일만 필터링
     images = [img for img in os.listdir(category_path) if img.lower().endswith((".png", ".jpg", ".jpeg"))]
     if not images:
         return jsonify({"error": "No images in this category"}), 404
 
-    # 랜덤 선택
     image_file = random.choice(images)
-    
-    # 정답 한글 이름
     correct_name = NAME_MAP.get(os.path.splitext(image_file)[0], os.path.splitext(image_file)[0])
 
-    # 오답 이름 (한글 매핑 적용)
     wrong_names = [
         NAME_MAP.get(os.path.splitext(img)[0], os.path.splitext(img)[0])
         for img in images if img != image_file
     ]
-
-    # 랜덤 3개 선택
     wrong_sample = random.sample(wrong_names, min(3, len(wrong_names)))
 
     return jsonify({
         "name": correct_name,
-        "imageUrl": f"/static/images/{category}/{image_file}",
+        "imageUrl": f"/static/images/{folder_name}/{image_file}",
+        "part1JsonUrl": f"/drawing_bot/contour_json/{folder_name}/{image_file}_part1.json",
+        "part2JsonUrl": f"/drawing_bot/contour_json/{folder_name}/{image_file}_part2.json",
+        "part3JsonUrl": f"/drawing_bot/contour_json/{folder_name}/{image_file}_part3.json",
         "wrongAnswers": wrong_sample
     })
 
-# 정적 파일 제공 (Flutter에서 불러올 때 필요)
+# EV3 전송용 엔드포인트
+@app.route("/api/draw/<category>/<image_name>", methods=["POST"])
+def draw_on_ev3(category, image_name):
+    folder_name = CATEGORY_MAP.get(category)
+    if not folder_name:
+        return jsonify({"error": "Category not found"}), 404
+
+    json_dir = os.path.join(JSON_FOLDER, folder_name)
+    json_file = os.path.join(json_dir, f"{os.path.splitext(image_name)[0]}.json")
+
+    if not os.path.exists(json_file):
+        return jsonify({"error": "JSON file not found"}), 404
+
+    try:
+        # control_ev3.py 실행 (경로 조정 필요)
+        subprocess.run(
+            ["python3", "control_ev3.py", json_file],
+            check=True
+        )
+        return jsonify({"status": "success", "file": os.path.basename(json_file)})
+    except subprocess.CalledProcessError as e:
+        return jsonify({"error": str(e)}), 500
+
+# 정적 파일 제공
 @app.route("/static/images/<path:filename>")
 def serve_image(filename):
     return send_from_directory(IMAGE_FOLDER, filename)

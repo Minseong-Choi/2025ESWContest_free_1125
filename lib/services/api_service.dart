@@ -1,6 +1,8 @@
 // lib/services/api_service.dart
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart';
 import '../models/drawing_model.dart';
 
 class ApiService {
@@ -13,7 +15,6 @@ class ApiService {
 
     try {
       final response = await http.get(url);
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
@@ -60,4 +61,34 @@ class ApiService {
       print('Error sending draw request to EV3: $e');
       return false;
     }
-  }}
+  }
+  // ✅ 이미지 업로드 (갤러리/카메라)
+  Future<bool> uploadImage(File imageFile) async {
+    final uri = Uri.parse("$baseUrl/upload"); // Flask 서버 업로드 엔드포인트
+    final request = http.MultipartRequest('POST', uri);
+
+    request.files.add(await http.MultipartFile.fromPath(
+      'file',
+      imageFile.path,
+      filename: basename(imageFile.path),
+    ));
+
+    try {
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        print("이미지 업로드 성공!");
+        return true;
+      } else {
+        print("이미지 업로드 실패: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      print("Error uploading image: $e");
+      return false;
+    }
+  }
+}
+
+
+

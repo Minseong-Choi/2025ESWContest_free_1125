@@ -1,6 +1,6 @@
 // lib/screens/home/home_screen.dart
 import 'package:flutter/material.dart';
-import '../category/category_screen.dart';
+import '../contents/contents_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -52,7 +52,7 @@ class HomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const CategoryScreen(),
+                      builder: (context) => const ContentsScreen(),
                     ),
                   );
                 },

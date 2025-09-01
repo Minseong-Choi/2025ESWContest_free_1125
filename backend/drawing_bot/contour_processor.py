@@ -2,13 +2,18 @@
 import re
 import json
 from pathlib import Path
+import argparse
 
-# EV3 축 기준 최대값
-AXIS_MAX_X = 400
-AXIS_MAX_Y = 1100
-
-def parse_contours(raw_text):
-    blocks = re.split(r'#\s*contour\s*\d+', raw_text)[1:]
+# ======================
+# 입력 파싱
+# ======================
+def parse_contours(raw_text: str):
+    """
+    '# contour N' 으로 구분된 블록에서
+    'x, y' 형식의 좌표들을 추출해 contour 리스트를 만든다.
+    return: List[List[Tuple[int,int]]]
+    """
+    blocks = re.split(r'#\s*contour\s*\d+', raw_text, flags=re.IGNORECASE)[1:]
     contours = []
     for blk in blocks:
         pts = []
@@ -20,35 +25,33 @@ def parse_contours(raw_text):
             contours.append(pts)
     return contours
 
-def scale_contours(contours):
-    xs = [x for c in contours for x,_ in c]
-    ys = [y for c in contours for _,y in c]
-    minx, maxx = min(xs), max(xs)
-    miny, maxy = min(ys), max(ys)
-
-    def mx(px): return (px - minx) / (maxx - minx) * AXIS_MAX_X
-    def my(py): return (py - miny) / (maxy - miny) * AXIS_MAX_Y
-
-    return [
-        [(mx(x), my(y)) for x,y in contour]
-        for contour in contours
-    ]
-
+# ======================
+# 메인
+# ======================
 def main():
-    infile  = Path("/root/instruct-pix2pix/contours.txt")
-    outfile = Path("/root/backend/drawing_bot/drawing_paths_stream.json")
+    parser = argparse.ArgumentParser(description="Convert contour txt to JSONL (EV3 coordinate ready).")
+    parser.add_argument("--infile", type=str, default="contours.txt",
+                        help="입력 contour 텍스트 파일 경로 (default: contours.txt)")
+    parser.add_argument("--outfile", type=str, default="drawing_paths_stream.json",
+                        help="출력 JSONL 파일 경로 (default: drawing_paths_stream.json)")
+    args = parser.parse_args()
 
-    raw      = infile.read_text(encoding="utf-8")
+    infile = Path(args.infile)
+    outfile = Path(args.outfile)
+
+    raw = infile.read_text(encoding="utf-8")
     contours = parse_contours(raw)
-    scaled   = scale_contours(contours)
+    if not contours:
+        raise SystemExit("❌ contours를 찾지 못했습니다. 입력 파일 형식을 확인하세요.")
 
     # contour 하나당 json.dumps → 한 줄씩 기록
     with outfile.open("w", encoding="utf-8") as f:
-        for contour in scaled:
+        for contour in contours:
             f.write(json.dumps(contour, ensure_ascii=False))
             f.write("\n")
 
-    print(f"✔ {outfile.name} 생성 완료: {len(scaled)} contours (한 줄에 1 contour씩)")
+    print(f"✔ {outfile.name} 생성 완료: {len(contours)} contours (한 줄에 1 contour씩)")
+    print("   (스케일링 없음, 입력 좌표 그대로 사용)")
 
 if __name__ == "__main__":
     main()

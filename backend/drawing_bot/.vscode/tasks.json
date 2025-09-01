@@ -1,0 +1,43 @@
+// .vscode/tasks.json
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Upload JSON to EV3",
+        "type": "shell",
+        "command": "scp",
+        "args": [
+          // 로컬의 JSON 파일
+          "drawing_paths_stream.json",
+          // EV3 쪽 경로: <유저>@<호스트>:<디렉터리> 형태
+          "robot@ev3dev.local:/home/robot/getting_started/"
+        ],
+        "problemMatcher": []
+      },
+      {
+        "label": "Run main.py on EV3",
+        "type": "shell",
+        "command": "pybricksdev",
+        "args": [
+          "run",
+          "usb",
+          "--wait",
+          "main.py"
+        ],
+        "options": {
+          // main.py 가 있는 폴더로 작업 디렉터리 지정
+          "cwd": "${workspaceFolder}/getting_started"
+        },
+        "problemMatcher": []
+      },
+      {
+        "label": "Upload & Run EV3",
+        "dependsOn": [
+          "Upload JSON to EV3",
+          "Run main.py on EV3"
+        ],
+        "dependsOrder": "sequence"
+      }
+    ]
+  }
+  

@@ -1,5 +1,5 @@
-// lib/screens/request/request_screen.dart
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 
 class RequestScreen extends StatefulWidget {
   const RequestScreen({Key? key}) : super(key: key);
@@ -10,8 +10,9 @@ class RequestScreen extends StatefulWidget {
 
 class _RequestScreenState extends State<RequestScreen> {
   final TextEditingController _textController = TextEditingController();
+  final api = ApiService(); // ApiService 인스턴스
 
-  void _submitRequest() {
+  void _submitRequest() async {
     final requestText = _textController.text.trim();
     if (requestText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -20,14 +21,18 @@ class _RequestScreenState extends State<RequestScreen> {
       return;
     }
 
-    // TODO: Flask 서버로 requestText 전송
-    print("사용자 요청: $requestText");
+    bool success = await api.sendRequest(requestText);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("요청이 전송되었습니다!")),
-    );
-
-    _textController.clear();
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("요청이 전송되었습니다!")),
+      );
+      _textController.clear();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("요청 전송 실패")),
+      );
+    }
   }
 
   @override

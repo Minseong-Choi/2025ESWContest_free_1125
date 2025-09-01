@@ -23,6 +23,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
       setState(() {
         _selectedImage = File(pickedFile.path);
       });
+
+      // 선택 후 바로 업로드 실행
+      await _uploadImage();
     }
   }
 
@@ -83,48 +86,31 @@ class _GalleryScreenState extends State<GalleryScreen> {
         toolbarHeight: 70,
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(
-              onTap: () => _showPickOptions(context),
-              child: Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey, width: 2),
-                ),
-                child: _selectedImage == null
-                    ? const Center(
-                  child: Text(
-                    "사진 업로드",
-                    style: TextStyle(fontSize: 20, color: Colors.black54),
-                  ),
-                )
-                    : ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.file(
-                    _selectedImage!,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
+        child: GestureDetector(
+          onTap: () => _showPickOptions(context),
+          child: Container(
+            width: 250,
+            height: 250,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey, width: 2),
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _uploadImage,
-              icon: const Icon(Icons.cloud_upload),
-              label: const Text("Flask 서버로 전송"),
-              style: ElevatedButton.styleFrom(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                textStyle:
-                const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            child: _selectedImage == null
+                ? const Center(
+              child: Text(
+                "사진 업로드",
+                style: TextStyle(fontSize: 20, color: Colors.black54),
               ),
             )
-          ],
+                : ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: Image.file(
+                _selectedImage!,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
         ),
       ),
     );

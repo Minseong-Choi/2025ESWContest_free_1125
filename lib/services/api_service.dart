@@ -88,6 +88,29 @@ class ApiService {
       return false;
     }
   }
+  // 요청 텍스트 전송
+  Future<bool> sendRequest(String text) async {
+    final url = Uri.parse('$baseUrl/api/request'); // Flask에서 받을 endpoint 맞춰주세요
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"text": text}),
+      );
+
+      if (response.statusCode == 200) {
+        print("요청 성공: ${response.body}");
+        return true;
+      } else {
+        print("요청 실패: ${response.statusCode} - ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("에러 발생: $e");
+      return false;
+    }
+  }
 }
 
 

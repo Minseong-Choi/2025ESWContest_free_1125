@@ -1,5 +1,8 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
+from services.imagen_service import generate_image
+from services.contour_service import process_contours_and_split3
+from services.json_service import contours_txt_to_json
 import os, random
 import subprocess
 
@@ -120,6 +123,53 @@ def draw_on_ev3(category, image_name):
         return jsonify({"status": "success", "file": os.path.basename(json_file)})
     except subprocess.CalledProcessError as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/request", methods=["POST"])
+def handle_request():
+    data = request.get_json()
+    prompt = data.get("text", "").strip()
+
+    if not prompt:
+        return jsonify({"error": "Empty prompt"}), 400
+
+    try:
+        # 1️⃣ 이미지 생성 (Gemini Imagen API)
+        image_path = f"static/generated/{prompt.replace(' ', '_')}.png"
+        os.makedirs("static/generated", exist_ok=True)
+        image_url = generate_image(prompt, save_path=image_path)
+
+        # 2️⃣ 이미지 → 컨투어 → txt 저장
+        output_dir = f"drawing_bot/contour_txt/{prompt.replace(' ', '_')}"
+        process_contours_and_split3(image_path, output_dir)
+
+        # txt 파일 경로 (part1, part2, part3 등)
+        txt_files = [os.path.join(output_dir, f) for f in os.listdir(output_dir) if f.endswith(".txt")]
+
+        # 3️⃣ txt → json 변환
+        json_file = f"drawing_bot/json/{prompt.replace(' ', '_')}.json"
+        os.makedirs("drawing_bot/json", exist_ok=True)
+        contours_txt_to_json(txt_files, json_file)
+
+        # 4️⃣ EV3 실행
+        try:
+            subprocess.run(
+                ["python3", "control_ev3.py", json_file],
+                check=True
+            )
+            return jsonify({
+                "status": "success",
+                "prompt": prompt,
+                "imageUrl": image_url,
+                "jsonFile": os.path.basename(json_file)
+            })
+        except subprocess.CalledProcessError as e:
+            return jsonify({"error": f"EV3 실행 실패: {str(e)}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": f"처리 실패: {str(e)}"}), 500
+
+
+
 
 # 정적 파일 제공
 @app.route("/static/images/<path:filename>")

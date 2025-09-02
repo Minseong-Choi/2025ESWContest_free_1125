@@ -3,6 +3,8 @@ from flask_cors import CORS
 from services.imagen_service import generate_image
 from services.contour_service import process_contours_and_split3
 from services.json_service import contours_txt_to_json
+from services.image_question_service import generate_questions_from_image
+from services.tts_service import generate_tts
 import os, random,subprocess, re
 import subprocess
 
@@ -47,7 +49,7 @@ NAME_MAP = {
     "fox_drawing" : "여우",
     "giraffe_drawing" : "기린",
     "hippo_drawing" : "하마",
-    "owl" : "부엉이",
+    "owl_drawing" : "부엉이",
     "penguin" : "펭귄",
     "1_drawing" : "송학(솔)",
     "2_drawing" : "매조",
@@ -129,7 +131,8 @@ def safe_filename(text: str) -> str:
 @app.route("/api/request", methods=["POST"])
 def handle_request():
     data = request.get_json()
-    prompt = data.get("text", "").strip()
+    user_text = data.get("text", "").strip()
+    prompt = f"Digital sketch of {user_text} with cartoon style, flat colors, playful and whimsical, white background"
 
     if not prompt:
         return jsonify({"error": "Empty prompt"}), 400
@@ -173,8 +176,50 @@ def handle_request():
     except Exception as e:
         return jsonify({"error": f"처리 실패: {str(e)}"}), 500
 
+UPLOAD_FOLDER = "static/uploads"
+AUDIO_FOLDER = "static/audio"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(AUDIO_FOLDER, exist_ok=True)
 
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['AUDIO_FOLDER'] = AUDIO_FOLDER
 
+# 업로드된 파일 접근 라우트
+@app.route('/static/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+# 이미지 업로드 API
+@app.route("/api/upload", methods=["POST"])
+def upload_image():
+    if "file" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    # 1️⃣ 이미지 저장
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+    file.save(save_path)
+
+    # 2️⃣ 서버에서 접근 가능한 URL 생성
+    image_url = f"http://localhost:5001/static/uploads/{file.filename}"
+
+    # 3️⃣ OpenAI로 질문 생성
+    questions = generate_questions_from_image(image_url)
+
+    # 4️⃣ TTS 생성
+    audio_paths = []
+    for i, q in enumerate(questions):
+        audio_file = os.path.join(app.config['AUDIO_FOLDER'], f"{file.filename}_q{i}.mp3")
+        generate_tts(q, save_path=audio_file)
+        audio_paths.append(audio_file)
+
+    return jsonify({
+        "questions": questions,
+        "audioFiles": audio_paths
+    })
 
 # 정적 파일 제공
 @app.route("/static/images/<path:filename>")

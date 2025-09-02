@@ -7,7 +7,7 @@ import '../models/drawing_model.dart';
 
 class ApiService {
   // 로컬 서버 IP와 포트
-  final String baseUrl = "http://143.248.93.88:5001"; // PC IP 에 맞춰서 변경
+  final String baseUrl = "http://192.168.0.14:5001"; // PC IP 에 맞춰서 변경
 
   // 랜덤 이미지 가져오기
   Future<DrawingData> getRandomDrawing(String category) async {
@@ -63,8 +63,9 @@ class ApiService {
     }
   }
   // ✅ 이미지 업로드 (갤러리/카메라)
-  Future<bool> uploadImage(File imageFile) async {
-    final uri = Uri.parse("$baseUrl/upload"); // Flask 서버 업로드 엔드포인트
+  // 업로드 함수 반환값을 Map으로 바꾸기
+  Future<Map<String, dynamic>?> uploadImage(File imageFile) async {
+    final uri = Uri.parse("$baseUrl/api/upload"); // /api/upload로 변경
     final request = http.MultipartRequest('POST', uri);
 
     request.files.add(await http.MultipartFile.fromPath(
@@ -75,17 +76,17 @@ class ApiService {
 
     try {
       final response = await request.send();
-
       if (response.statusCode == 200) {
-        print("이미지 업로드 성공!");
-        return true;
+        final resStr = await response.stream.bytesToString();
+        final data = json.decode(resStr);
+        return data; // questions + audioFiles 포함
       } else {
         print("이미지 업로드 실패: ${response.statusCode}");
-        return false;
+        return null;
       }
     } catch (e) {
       print("Error uploading image: $e");
-      return false;
+      return null;
     }
   }
   // 요청 텍스트 전송

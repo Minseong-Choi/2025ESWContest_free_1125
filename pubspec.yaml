@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   image_picker: ^1.0.7
+  audioplayers: ^6.5.0
 
   # UI 관련
   cupertino_icons: ^1.0.6

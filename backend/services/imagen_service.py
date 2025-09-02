@@ -1,19 +1,28 @@
+# imagen_service.py
+import base64
 import os
-import requests
+from openai import OpenAI
+from PIL import Image
+from io import BytesIO
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-IMAGEN_MODEL = "imagen-4.0-generate-001"
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{IMAGEN_MODEL}:generateImages?key={GEMINI_API_KEY}"
-def generate_image(prompt: str) -> str:
-    body = {
-        "prompt": prompt,
-        "parameters": {
-            "resolution": "1024x1024"
-        }
-    }
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
-    response = requests.post(API_URL, json=body)
-    response.raise_for_status()
+# 이미지 생성 함수
+def generate_image(prompt: str, save_path: str = "static/generated/img1.png") -> str:
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
-    resp_json = response.json()
-    return resp_json["predictions"][0]["imageUri"]
+    result = client.images.generate(
+        model="gpt-image-1",
+        prompt=prompt,
+        quality="low",
+        size="1024x1024"
+    )
+
+    # Base64 → 이미지 변환
+    image_base64 = result.data[0].b64_json
+    image_bytes = base64.b64decode(image_base64)
+    image = Image.open(BytesIO(image_bytes))
+
+    # PNG로 저장
+    image.save(save_path, format="PNG", optimize=True)
+    return save_path

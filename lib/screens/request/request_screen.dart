@@ -12,6 +12,10 @@ class _RequestScreenState extends State<RequestScreen> {
   final TextEditingController _textController = TextEditingController();
   final api = ApiService(); // ApiService 인스턴스
 
+  String? _imageUrl;  // 서버에서 받은 이미지 URL
+  String? _message;   // 서버에서 받은 메시지
+  bool _loading = false; // 요청 진행 상태
+
   void _submitRequest() async {
     final requestText = _textController.text.trim();
     if (requestText.isEmpty) {
@@ -21,12 +25,23 @@ class _RequestScreenState extends State<RequestScreen> {
       return;
     }
 
-    bool success = await api.sendRequest(requestText);
+    setState(() {
+      _loading = true;
+      _imageUrl = null;
+      _message = null;
+    });
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("요청이 전송되었습니다!")),
-      );
+    final result = await api.sendRequest(requestText);
+
+    setState(() {
+      _loading = false;
+    });
+
+    if (result != null) {
+      setState(() {
+        _imageUrl = result["imageUrl"];
+        _message = result["message"] ?? "그림이 완성되었습니다!";
+      });
       _textController.clear();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -49,13 +64,12 @@ class _RequestScreenState extends State<RequestScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
               "무엇을 그려드릴까요?",
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             TextField(
               controller: _textController,
               maxLines: 5,
@@ -72,10 +86,13 @@ class _RequestScreenState extends State<RequestScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _submitRequest,
-              child: const Text(
+              onPressed: _loading ? null : _submitRequest,
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
                 "요청 보내기",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style:
+                TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               style: ElevatedButton.styleFrom(
                 padding:
@@ -84,7 +101,26 @@ class _RequestScreenState extends State<RequestScreen> {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-            )
+            ),
+            const SizedBox(height: 30),
+            if (_message != null) ...[
+              Text(
+                _message!,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+            if (_imageUrl != null)
+              Expanded(
+                child: Image.network(
+                  _imageUrl!,
+                  fit: BoxFit.contain,
+                ),
+              ),
           ],
         ),
       ),

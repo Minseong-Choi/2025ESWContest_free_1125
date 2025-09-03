@@ -203,23 +203,24 @@ def upload_image():
     save_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
     file.save(save_path)
 
-    # 2️⃣ 서버에서 접근 가능한 URL 생성
-    image_url = f"http://localhost:5001/static/uploads/{file.filename}"
-
     # 3️⃣ OpenAI로 질문 생성
-    questions = generate_questions_from_image(image_url)
-
-    # 4️⃣ TTS 생성
-    audio_paths = []
-    for i, q in enumerate(questions):
-        audio_file = os.path.join(app.config['AUDIO_FOLDER'], f"{file.filename}_q{i}.mp3")
-        generate_tts(q, save_path=audio_file)
-        audio_paths.append(audio_file)
+    questions = generate_questions_from_image(save_path)
 
     return jsonify({
-        "questions": questions,
-        "audioFiles": audio_paths
+        "questions": questions
     })
+
+    # 4️⃣ TTS 생성
+    #audio_paths = []
+    #for i, q in enumerate(questions):
+        #audio_file = os.path.join(app.config['AUDIO_FOLDER'], f"{file.filename}_q{i}.mp3")
+        #generate_tts(q, save_path=audio_file)
+        #audio_paths.append(audio_file)
+
+    #return jsonify({
+        #"questions": questions,
+        #"audioFiles": audio_paths
+    #})
 
 # 정적 파일 제공
 @app.route("/static/images/<path:filename>")

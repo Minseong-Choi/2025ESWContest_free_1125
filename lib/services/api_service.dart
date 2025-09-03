@@ -63,9 +63,8 @@ class ApiService {
     }
   }
   // ✅ 이미지 업로드 (갤러리/카메라)
-  // 업로드 함수 반환값을 Map으로 바꾸기
   Future<Map<String, dynamic>?> uploadImage(File imageFile) async {
-    final uri = Uri.parse("$baseUrl/api/upload"); // /api/upload로 변경
+    final uri = Uri.parse("$baseUrl/api/upload");
     final request = http.MultipartRequest('POST', uri);
 
     request.files.add(await http.MultipartFile.fromPath(
@@ -79,7 +78,7 @@ class ApiService {
       if (response.statusCode == 200) {
         final resStr = await response.stream.bytesToString();
         final data = json.decode(resStr);
-        return data; // questions + audioFiles 포함
+        return data; // questions만 포함
       } else {
         print("이미지 업로드 실패: ${response.statusCode}");
         return null;
@@ -89,6 +88,7 @@ class ApiService {
       return null;
     }
   }
+
   // 요청 텍스트 전송
   Future<Map<String, dynamic>?> sendRequest(String text) async {
     final url = Uri.parse('$baseUrl/api/request'); // Flask endpoint

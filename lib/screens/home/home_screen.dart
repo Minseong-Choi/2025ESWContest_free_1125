@@ -26,23 +26,23 @@ class HomeScreen extends StatelessWidget {
             children: [
               Icon(
                 Icons.palette,
-                size: 120,
+                size: 150,
                 color: Colors.deepOrange.shade300,
               ),
               const SizedBox(height: 40),
               Text(
-                '즐거운 그림 그리기',
+                'Draw-care',
                 style: TextStyle(
-                  fontSize: 36,
+                  fontSize: 50,
                   fontWeight: FontWeight.bold,
                   color: Colors.brown.shade700,
                 ),
               ),
               const SizedBox(height: 20),
               Text(
-                '그림을 보고 무엇인지 맞춰보세요!',
+                '해마  기능 자극 기반 치매 예방 프로그램',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   color: Colors.brown.shade600,
                 ),
               ),

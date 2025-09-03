@@ -132,49 +132,65 @@ def safe_filename(text: str) -> str:
 def handle_request():
     data = request.get_json()
     user_text = data.get("text", "").strip()
-    prompt = f"Digital sketch of {user_text} with cartoon style, flat colors, playful and whimsical, white background"
+    if not user_text:
+        return jsonify({"error": "내용이 비어있습니다."}), 400
 
-    if not prompt:
-        return jsonify({"error": "Empty prompt"}), 400
+    prompt = f"Digital sketch of {user_text} with cartoon style, flat colors, playful and whimsical, white background"
 
     try:
         safe_prompt = safe_filename(prompt)
 
-        # 1️⃣ 이미지 생성
+        # 이미지 저장 위치
+        os.makedirs("static/generated", exist_ok=True)
         image_path = f"static/generated/{safe_prompt}.png"
-        image_url = generate_image(prompt, save_path=image_path)
 
-        # 2️⃣ 이미지 → 컨투어
-        output_dir = f"drawing_bot/contour_txt/{safe_prompt}"
-        process_contours_and_split3(image_path, output_dir)
+        # generate_image가 파일을 저장하도록
+        generate_image(prompt, save_path=image_path)
 
-        txt_files = [
-            os.path.join(output_dir, f) for f in os.listdir(output_dir) if f.endswith(".txt")
-        ]
+        # Flask 서버의 정적 URL 만들어서 Flutter로 반환
+        image_url = f"{request.host_url}static/generated/{os.path.basename(image_path)}"
 
-        # 3️⃣ txt → json 변환
-        json_file = f"drawing_bot/json/{safe_prompt}.json"
-        os.makedirs("drawing_bot/json", exist_ok=True)
-        contours_txt_to_json(txt_files, json_file)
-
-        # 4️⃣ EV3 실행
-        subprocess.run(
-            ["python3", "control_ev3.py", json_file],
-            check=True
-        )
 
         return jsonify({
             "status": "success",
             "prompt": prompt,
-            "message" : "그림이 완성되었습니다!",
-            "imageUrl": image_url,
-            "jsonFile": os.path.basename(json_file)
+            "message": "그림이 완성되었습니다!",
+            "imageUrl": image_url  # 🔥 URL로 보냄
         })
 
-    except subprocess.CalledProcessError as e:
-        return jsonify({"error": f"EV3 실행 실패: {str(e)}"}), 500
     except Exception as e:
-        return jsonify({"error": f"처리 실패: {str(e)}"}), 500
+        return jsonify({"error": f"이미지 생성 실패: {str(e)}"}), 500
+
+
+        # 2️⃣ 이미지 → 컨투어
+        #output_dir = f"drawing_bot/contour_txt/{safe_prompt}"
+        #process_contours_and_split3(image_path, output_dir)
+
+        #txt_files = [
+        #    os.path.join(output_dir, f) for f in os.listdir(output_dir) if f.endswith(".txt")
+        #]
+
+        # 3️⃣ txt → json 변환
+        #json_file = f"drawing_bot/json/{safe_prompt}.json"
+        #os.makedirs("drawing_bot/json", exist_ok=True)
+        #contours_txt_to_json(txt_files, json_file)
+
+        # 4️⃣ EV3 실행
+        #subprocess.run(
+            ###)
+
+        #return jsonify({
+        #    "status": "success",
+        #    "prompt": prompt,
+        #    "message" : "그림이 완성되었습니다!",
+        #    "imageUrl": image_url,
+        #    "jsonFile": os.path.basename(json_file)
+        #})
+
+    #except subprocess.CalledProcessError as e:
+    #    return jsonify({"error": f"EV3 실행 실패: {str(e)}"}), 500
+    #except Exception as e:
+    #    return jsonify({"error": f"처리 실패: {str(e)}"}), 500
 
 UPLOAD_FOLDER = "static/uploads"
 AUDIO_FOLDER = "static/audio"

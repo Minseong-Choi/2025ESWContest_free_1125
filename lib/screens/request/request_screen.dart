@@ -65,16 +65,21 @@ class _RequestScreenState extends State<RequestScreen> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            const Text(
-              "무엇을 그려드릴까요?",
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            // 중앙 정렬된 타이틀
+            const Center(
+              child: Text(
+                "무엇을 그려드릴까요?",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 20),
+
+            // 입력창
             TextField(
               controller: _textController,
               maxLines: 5,
               decoration: InputDecoration(
-                hintText: "예: 귀여운 강아지, 우주 배경의 풍경 등",
+                hintText: "예: 무지개 위를 달리는 고양이, 구름 위에 앉은 토끼 등",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: const BorderSide(color: Colors.grey, width: 2),
@@ -85,24 +90,31 @@ class _RequestScreenState extends State<RequestScreen> {
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 20),
+
+            // 버튼
             ElevatedButton(
               onPressed: _loading ? null : _submitRequest,
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                "요청 보내기",
-                style:
-                TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
               style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple.shade300,
                 padding:
                 const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                "요청 보내기",
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white), // 흰색으로 지정
+              ),
             ),
+
             const SizedBox(height: 30),
+
             if (_message != null) ...[
               Text(
                 _message!,
@@ -114,11 +126,15 @@ class _RequestScreenState extends State<RequestScreen> {
               ),
               const SizedBox(height: 20),
             ],
+
             if (_imageUrl != null)
               Expanded(
-                child: Image.network(
-                  _imageUrl!,
-                  fit: BoxFit.contain,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    _imageUrl!,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
           ],

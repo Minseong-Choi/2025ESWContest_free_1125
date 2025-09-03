@@ -15,110 +15,77 @@ class ContentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.orange.shade50,
       appBar: AppBar(
         title: const Text(
-          '카테고리 선택',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          "무엇을 해볼까요?",
+          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.orange.shade300,
         toolbarHeight: 80,
-        iconTheme: const IconThemeData(size: 30),
+        centerTitle: true,
+        iconTheme: const IconThemeData(size: 30, color: Colors.white),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.yellow.shade50,
-              Colors.orange.shade50,
-            ],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 20,
-              mainAxisSpacing: 20,
-              childAspectRatio: 1.2,
-            ),
-            itemCount: contents.length,
-            itemBuilder: (context, index) {
-              final item = contents[index];
-
-              return CategoryButton(
-                name: item['name'],
-                icon: item['icon'],
-                color: item['color'],
-                onTap: () {
-                  Widget nextScreen;
-
-                  if (item['name'] == '그림 퀴즈') {
-                    nextScreen = CategoryScreen();
-                  } else if (item['name'] == '사진 업로드') {
-                    nextScreen = GalleryScreen();
-                  } else if (item['name'] == '그림 요청하기') {
-                    nextScreen = RequestScreen();
-                  } else {
-                    return;
-                  }
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => nextScreen),
-                  );
-                },
-              );
-            },
-          ),
+      body: Center( // ✅ 화면 정중앙 배치
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // 세로 중앙
+          children: [
+            _buildPlayfulButton(contents[0], context, size: 200),
+            const SizedBox(height: 30),
+            _buildPlayfulButton(contents[1], context, size: 200),
+            const SizedBox(height: 30),
+            _buildPlayfulButton(contents[2], context, size: 200), // 밑에 조금 더 큼
+          ],
         ),
       ),
     );
   }
-}
 
-class CategoryButton extends StatelessWidget {
-  final String name;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const CategoryButton({
-    Key? key,
-    required this.name,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildPlayfulButton(Map<String, dynamic> item, BuildContext context,
+      {double size = 180}) {
     return InkWell(
-      onTap: onTap,
-      child: Container(
+      onTap: () {
+        Widget nextScreen;
+
+        if (item['name'] == '그림 퀴즈') {
+          nextScreen = const CategoryScreen();
+        } else if (item['name'] == '사진 업로드') {
+          nextScreen = const GalleryScreen();
+        } else {
+          nextScreen = const RequestScreen();
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => nextScreen),
+        );
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(25),
+          color: item['color'],
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
+              color: item['color'].withOpacity(0.5),
               spreadRadius: 2,
-              blurRadius: 5,
-              offset: const Offset(0, 3),
+              blurRadius: 10,
+              offset: const Offset(4, 6),
             ),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 60, color: Colors.white),
-            const SizedBox(height: 15),
+            Icon(item['icon'], size: size * 0.35, color: Colors.white),
+            const SizedBox(height: 12),
             Text(
-              name,
-              style: const TextStyle(
-                fontSize: 26,
+              item['name'],
+              style: TextStyle(
+                fontSize: size * 0.12,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),

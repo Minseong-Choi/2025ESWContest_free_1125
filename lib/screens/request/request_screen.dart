@@ -12,9 +12,12 @@ class _RequestScreenState extends State<RequestScreen> {
   final TextEditingController _textController = TextEditingController();
   final api = ApiService(); // ApiService 인스턴스
 
-  String? _imageUrl;  // 서버에서 받은 이미지 URL
-  String? _message;   // 서버에서 받은 메시지
-  bool _loading = false; // 요청 진행 상태
+  String? _imageUrl;
+  String? _message;
+  List<List<List<num>>>? _part1Contours;
+  List<List<List<num>>>? _part2Contours;
+  List<List<List<num>>>? _part3Contours;
+  bool _loading = false;
 
   void _submitRequest() async {
     final requestText = _textController.text.trim();
@@ -41,6 +44,33 @@ class _RequestScreenState extends State<RequestScreen> {
       setState(() {
         _imageUrl = result["imageUrl"];
         _message = result["message"] ?? "그림이 완성되었습니다!";
+        if (result["part1Contours"] != null) {
+          _part1Contours = List<List<List<num>>>.from(
+            (result["part1Contours"] as List).map((e) => 
+              List<List<num>>.from((e as List).map((f) => 
+                List<num>.from((f as List).map((g) => (g as num)))
+              ))
+            )
+          );
+        }
+        if (result["part2Contours"] != null) {
+          _part2Contours = List<List<List<num>>>.from(
+            (result["part2Contours"] as List).map((e) => 
+              List<List<num>>.from((e as List).map((f) => 
+                List<num>.from((f as List).map((g) => (g as num)))
+              ))
+            )
+          );
+        }
+        if (result["part3Contours"] != null) {
+          _part3Contours = List<List<List<num>>>.from(
+            (result["part3Contours"] as List).map((e) => 
+              List<List<num>>.from((e as List).map((f) => 
+                List<num>.from((f as List).map((g) => (g as num)))
+              ))
+            )
+          );
+        }
       });
       _textController.clear();
     } else {

@@ -1,15 +1,19 @@
 from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 from services.imagen_service import generate_image
-from services.contour_service import process_contours_and_split3
+from services.contour_service import process_contours_and_split3, process_contours_and_split3_json
 from services.json_service import contours_txt_to_json
 from services.image_question_service import generate_questions_from_image
 from services.tts_service import generate_tts
+from services.db_service import init_database, save_contours_to_db, get_random_drawing_by_category, get_wrong_answers_by_category
 import os, random,subprocess, re
 import subprocess
+import json
 
 app = Flask(__name__)
 CORS(app)
+
+init_database()
 
 # 이미지가 들어있는 폴더 경로
 IMAGE_FOLDER = os.path.join(app.root_path, "static/images")
@@ -76,6 +80,18 @@ CATEGORY_MAP = {
 
 @app.route("/api/random/<category>")
 def random_image(category):
+    db_result = get_random_drawing_by_category(category)
+    if db_result:
+        wrong_answers = get_wrong_answers_by_category(category, db_result['id'], 3)
+        return jsonify({
+            "name": db_result['name'],
+            "imageUrl": db_result['imageUrl'],
+            "part1Contours": db_result['part1Contours'],
+            "part2Contours": db_result['part2Contours'],
+            "part3Contours": db_result['part3Contours'],
+            "wrongAnswers": wrong_answers
+        })
+    
     folder_name = CATEGORY_MAP.get(category)
     if not folder_name:
         return jsonify({"error": "Category not found"}), 404
@@ -103,7 +119,6 @@ def random_image(category):
         "wrongAnswers": wrong_sample
     })
 
-# EV3 전송용 엔드포인트
 @app.route("/api/draw/<category>/<image_name>", methods=["POST"])
 def draw_on_ev3(category, image_name):
     folder_name = CATEGORY_MAP.get(category)
@@ -117,13 +132,39 @@ def draw_on_ev3(category, image_name):
         return jsonify({"error": "JSON file not found"}), 404
 
     try:
-        # control_ev3.py 실행 (경로 조정 필요)
         subprocess.run(
             ["python3", "control_ev3.py", json_file],
             check=True
         )
         return jsonify({"status": "success", "file": os.path.basename(json_file)})
     except subprocess.CalledProcessError as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/draw/contours", methods=["POST"])
+def draw_contours_on_ev3():
+    data = request.get_json()
+    contours = data.get("contours")
+    
+    if not contours:
+        return jsonify({"error": "No contours provided"}), 400
+    
+    try:
+        import tempfile
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        for contour in contours:
+            temp_file.write(json.dumps(contour) + "\n")
+        temp_file.close()
+        
+        subprocess.run(
+            ["python3", "control_ev3.py", temp_file.name],
+            check=True
+        )
+        
+        os.unlink(temp_file.name)
+        return jsonify({"status": "success", "message": "Contours drawn successfully"})
+    except Exception as e:
+        if os.path.exists(temp_file.name):
+            os.unlink(temp_file.name)
         return jsonify({"error": str(e)}), 500
 
 def safe_filename(text: str) -> str:
@@ -139,26 +180,33 @@ def handle_request():
 
     try:
         safe_prompt = safe_filename(prompt)
-
-        # 이미지 저장 위치
         os.makedirs("static/generated", exist_ok=True)
         image_path = f"static/generated/{safe_prompt}.png"
-
-        # generate_image가 파일을 저장하도록
         generate_image(prompt, save_path=image_path)
-
-        # Flask 서버의 정적 URL 만들어서 Flutter로 반환
         image_url = f"{request.host_url}static/generated/{os.path.basename(image_path)}"
-
-
+        
+        part1, part2, part3 = process_contours_and_split3_json(image_path)
+        
+        category = "generated"
+        try:
+            drawing_id = save_contours_to_db(user_text, category, image_url, part1, part2, part3)
+            print(f"Drawing saved to DB with ID: {drawing_id}")
+        except Exception as db_error:
+            print(f"DB save error: {str(db_error)}")
+            return jsonify({"error": f"DB 저장 실패: {str(db_error)}"}), 500
+        
         return jsonify({
             "status": "success",
             "prompt": prompt,
             "message": "그림이 완성되었습니다!",
-            "imageUrl": image_url  # 🔥 URL로 보냄
+            "imageUrl": image_url,
+            "part1Contours": part1,
+            "part2Contours": part2,
+            "part3Contours": part3
         })
 
     except Exception as e:
+        print(f"Image generation error: {str(e)}")
         return jsonify({"error": f"이미지 생성 실패: {str(e)}"}), 500
 
 

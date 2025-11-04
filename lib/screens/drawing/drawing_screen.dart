@@ -40,8 +40,11 @@ class _DrawingScreenState extends State<DrawingScreen> {
         _isLoading = false;
       });
 
-      // EV3에 1/3 그리기 명령 전송
-      await _apiService.drawOnEv3(_drawingData!.part1JsonUrl);
+      if (_drawingData!.part1Contours != null) {
+        await _apiService.drawOnEv3(null, contours: _drawingData!.part1Contours);
+      } else if (_drawingData!.part1JsonUrl != null) {
+        await _apiService.drawOnEv3(_drawingData!.part1JsonUrl);
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       _showErrorDialog();
@@ -71,13 +74,21 @@ class _DrawingScreenState extends State<DrawingScreen> {
       _selectedAnswer = null;
     });
 
-    await _apiService.drawOnEv3(_drawingData!.part2JsonUrl);
+    if (_drawingData!.part2Contours != null) {
+      await _apiService.drawOnEv3(null, contours: _drawingData!.part2Contours);
+    } else if (_drawingData!.part2JsonUrl != null) {
+      await _apiService.drawOnEv3(_drawingData!.part2JsonUrl);
+    }
   }
 
   void _completeDrawing() async {
     setState(() => _currentStage = DrawingStage.complete);
 
-    await _apiService.drawOnEv3(_drawingData!.part3JsonUrl);
+    if (_drawingData!.part3Contours != null) {
+      await _apiService.drawOnEv3(null, contours: _drawingData!.part3Contours);
+    } else if (_drawingData!.part3JsonUrl != null) {
+      await _apiService.drawOnEv3(_drawingData!.part3JsonUrl);
+    }
 
     _showRetryDialog();
   }

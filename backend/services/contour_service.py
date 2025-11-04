@@ -169,3 +169,75 @@ def process_contours_and_split3(image_path, output_dir, simplification_ratio=0.0
     parts_float = _dedupe_parts(parts_float)
     parts_int   = _round_clip_parts(parts_float, MAX_X, MAX_Y)
     return save_parts_as_txt(base_name, output_dir, parts_int)
+
+def process_contours_and_split3_json(image_path, simplification_ratio=0.0001):
+    image = cv2.imread(image_path)
+    if image is None:
+        raise FileNotFoundError(f"Error: Unable to load image at {image_path}")
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
+    contours, _ = cv2.findContours(binary, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    simplified = []
+    for c in contours:
+        peri = cv2.arcLength(c, True)
+        eps = simplification_ratio * peri
+        approx = cv2.approxPolyDP(c, eps, True)
+        if approx is not None and approx.shape[0] > 0:
+            simplified.append(approx)
+
+    if not simplified:
+        raise ValueError("No contours found.")
+
+    normal_contours = [c.copy() for c in simplified]
+    rotated_contours = _rotate_points_90_ccw(simplified)
+    S_n, tx_n, ty_n = _compute_fit_params(normal_contours, MAX_X, MAX_Y, 0, True)
+    S_r, tx_r, ty_r = _compute_fit_params(rotated_contours, MAX_X, MAX_Y, 0, True)
+
+    if S_r > S_n:
+        chosen_oriented = rotated_contours
+        S, tx, ty = S_r, tx_r, ty_r
+    else:
+        chosen_oriented = normal_contours
+        S, tx, ty = S_n, tx_n, ty_n
+
+    transformed = _apply_transform_once(chosen_oriented, S, tx, ty)
+    minx_c, miny_c, maxx_c, maxy_c = _content_bbox_in_canvas(transformed)
+    parts_float = _split_by_three_vertical_bands(transformed, miny_c, maxy_c)
+    parts_float = _dedupe_parts(parts_float)
+    parts_int = _round_clip_parts(parts_float, MAX_X, MAX_Y)
+    
+    def scale_contours(parts_int):
+        all_contours = []
+        for segs in parts_int:
+            for seg in segs:
+                if seg:
+                    all_contours.append(seg)
+        if not all_contours:
+            return [[], [], []]
+        
+        xs = [x for c in all_contours for x, _ in c]
+        ys = [y for c in all_contours for _, y in c]
+        if not xs or not ys:
+            return [[], [], []]
+        
+        minx, maxx = min(xs), max(xs)
+        miny, maxy = min(ys), max(ys)
+        if maxx == minx or maxy == miny:
+            return [[], [], []]
+        
+        def mx(px): return (px - minx) / (maxx - minx) * MAX_X
+        def my(py): return (py - miny) / (maxy - miny) * MAX_Y
+        
+        scaled_parts = []
+        for segs in parts_int:
+            scaled_segs = []
+            for seg in segs:
+                scaled_seg = [(mx(x), my(y)) for x, y in seg]
+                if scaled_seg:
+                    scaled_segs.append(scaled_seg)
+            scaled_parts.append(scaled_segs)
+        
+        return scaled_parts
+    
+    scaled_parts = scale_contours(parts_int)
+    return scaled_parts[0], scaled_parts[1], scaled_parts[2]
